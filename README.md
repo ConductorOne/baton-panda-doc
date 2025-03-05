@@ -38,6 +38,8 @@ baton resources
 
 `baton-panda-doc` will pull down information about the following resources:
 - Users
+- Workspaces
+- Roles
 
 # Contributing, Support and Issues
 
@@ -63,6 +65,7 @@ Available Commands:
   help               Help about any command
 
 Flags:
+      --api-key string               required: The API key for your PandaDoc account ($BATON_API_KEY)
       --client-id string             The client ID used to authenticate with ConductorOne ($BATON_CLIENT_ID)
       --client-secret string         The client secret used to authenticate with ConductorOne ($BATON_CLIENT_SECRET)
   -f, --file string                  The path to the c1z file to sync with ($BATON_FILE) (default "sync.c1z")

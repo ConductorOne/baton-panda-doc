@@ -1,0 +1,17 @@
+{
+    "results": [
+        {
+            "id": "testWorkspace01",
+            "name": "test01",
+            "owner": "testUser01@test.com",
+            "date_created": "2025-02-20T14:39:55.779213Z"
+        },
+        {
+            "id": "testWorkspace02",
+            "name": "test01",
+            "owner": "testUser01@test.com",
+            "date_created": "2025-02-20T14:39:55.779213Z"
+        }
+    ],
+    "total": 2
+}
