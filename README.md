@@ -8,6 +8,10 @@ Check out [Baton](https://github.com/conductorone/baton) to learn more the proje
 
 # Getting Started
 
+## Prerequisites
+
+To obtain the necessary API key, in your PandaDoc account, go to Dev Center, Configuration, under API keys you will be able to generate production or Sandbox key. For more information visit: [API-Key Documentation](https://developers.pandadoc.com/reference/api-key-authentication-process)
+
 ## brew
 
 ```
@@ -38,6 +42,8 @@ baton resources
 
 `baton-panda-doc` will pull down information about the following resources:
 - Users
+- Workspaces
+- Roles
 
 # Contributing, Support and Issues
 
@@ -63,6 +69,8 @@ Available Commands:
   help               Help about any command
 
 Flags:
+      --api-key string               required: The API key for your PandaDoc account ($BATON_API_KEY)
+      --domain string                Optional: Set to 'eu' for Europe API instance ($BATON_API_DOMAIN)
       --client-id string             The client ID used to authenticate with ConductorOne ($BATON_CLIENT_ID)
       --client-secret string         The client secret used to authenticate with ConductorOne ($BATON_CLIENT_SECRET)
   -f, --file string                  The path to the c1z file to sync with ($BATON_FILE) (default "sync.c1z")
