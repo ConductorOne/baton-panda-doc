@@ -1,0 +1,47 @@
+{
+    "total": 2,
+    "results": [
+        {
+            "user_id": "testUser01",
+            "email": "testUser01@test.com",
+            "first_name": "User1",
+            "last_name": "Test",
+            "phone_number": null,
+            "is_organization_owner": false,
+            "license": "Guest",
+            "workspaces": [
+                {
+                    "role": "Collaborator",
+                    "workspace_id": "TestWorkspace01",
+                    "membership_id": "testMember01"
+                },
+                {
+                    "role": "Custom Role",
+                    "workspace_id": "TestWorkspace02",
+                    "membership_id": "testMember02"
+                }
+            ]
+        },
+        {
+            "user_id": "testUser02",
+            "email": "testUser02@test.com",
+            "first_name": "User2",
+            "last_name": "Test",
+            "phone_number": null,
+            "is_organization_owner": true,
+            "license": "Full",
+            "workspaces": [
+                {
+                    "role": "Admin",
+                    "workspace_id": "TestWorkspace01",
+                    "membership_id": "testMember02"
+                },
+                {
+                    "role": "Admin",
+                    "workspace_id": "TestWorkspace02",
+                    "membership_id": "testMember02"
+                }
+            ]
+        }
+    ]
+}
