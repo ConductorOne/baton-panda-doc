@@ -1,9 +1,10 @@
 module github.com/conductorone/baton-panda-doc
 
 go 1.23.0
+toolchain go1.24.1
 
 require (
-	github.com/conductorone/baton-sdk v0.2.81
+	github.com/conductorone/baton-sdk v0.2.83
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/spf13/viper v1.19.0
 	go.uber.org/zap v1.27.0
