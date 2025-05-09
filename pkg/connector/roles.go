@@ -18,8 +18,7 @@ import (
 type roleBuilder struct {
 	resourceType    *v2.ResourceType
 	client          *client.PandaDocClient
-	users           []client.User
-	usersMutex      sync.RWMutex
+	connector       *Connector
 	workspaces      []client.Workspace
 	workspacesMutex sync.RWMutex
 }
@@ -42,14 +41,15 @@ func (rb *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId
 		rolesResource = append(rolesResource, roleResource)
 	}
 
-	err := rb.GetUsers(ctx)
+	err := rb.connector.cacheUsers(ctx)
+
 	if err != nil {
 		return nil, "", nil, err
 	}
 
 	systemRoles := []string{"Admin", "Collaborator", "Member", "Manager"}
 
-	users := rb.users
+	users := rb.connector.cachedUsers
 	for _, user := range users {
 		for _, workspace := range user.Workspaces {
 			if !slices.Contains(systemRoles, workspace.Role) {
@@ -98,13 +98,13 @@ func (rb *roleBuilder) Entitlements(ctx context.Context, resource *v2.Resource, 
 func (rb *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
 	var grants []*v2.Grant
 
-	err := rb.GetUsers(ctx)
+	err := rb.connector.cacheUsers(ctx)
 
 	if err != nil {
 		return nil, "", nil, err
 	}
 
-	users := rb.users
+	users := rb.connector.cachedUsers
 	for _, user := range users {
 		for _, workspace := range user.Workspaces {
 			if workspace.Role == resource.Id.Resource {
@@ -125,10 +125,11 @@ func (rb *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken
 	return grants, "", nil, nil
 }
 
-func newRolesBuilder(client *client.PandaDocClient) *roleBuilder {
+func newRolesBuilder(client *client.PandaDocClient, con *Connector) *roleBuilder {
 	return &roleBuilder{
 		resourceType: roleResourceType,
 		client:       client,
+		connector:    con,
 	}
 }
 
@@ -151,56 +152,12 @@ func parseIntoRoleResource(_ context.Context, role *client.Role, _ *v2.ResourceI
 	return ret, nil
 }
 
-func (rb *roleBuilder) GetUsers(ctx context.Context) error {
-	rb.usersMutex.RLock()
-	defer rb.usersMutex.RUnlock()
-
-	paginationToken := pagination.Token{
-		Size:  50,
-		Token: "",
-	}
-
-	if rb.users != nil {
-		return nil
-	}
-
-	for {
-		bag, pageToken, err := getToken(&paginationToken, userResourceType)
-		if err != nil {
-			return err
-		}
-		users, nextPageToken, _, err := rb.client.ListUsers(ctx, client.PageOptions{
-			Count: paginationToken.Size,
-			Page:  pageToken,
-		})
-		if err != nil {
-			return err
-		}
-		err = bag.Next(nextPageToken)
-		if err != nil {
-			return err
-		}
-
-		rb.users = append(rb.users, users...)
-		nextPageToken, err = bag.Marshal()
-		if err != nil {
-			return err
-		}
-		if nextPageToken == "" {
-			break
-		}
-		paginationToken.Token = nextPageToken
-	}
-
-	return nil
-}
-
 func (rb *roleBuilder) GetWorkspaces(ctx context.Context) error {
 	rb.workspacesMutex.RLock()
 	defer rb.workspacesMutex.RUnlock()
 
 	paginationToken := pagination.Token{
-		Size:  50,
+		Size:  wsPageSize,
 		Token: "",
 	}
 

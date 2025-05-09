@@ -2,7 +2,6 @@ package connector
 
 import (
 	"context"
-	"sync"
 
 	"github.com/conductorone/baton-panda-doc/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
@@ -14,8 +13,7 @@ import (
 type userBuilder struct {
 	resourceType *v2.ResourceType
 	client       *client.PandaDocClient
-	users        []client.User
-	usersMutex   sync.RWMutex
+	connector    *Connector
 }
 
 func (ub *userBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
@@ -27,13 +25,14 @@ func (ub *userBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 func (ub *userBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
 	var resources []*v2.Resource
 
-	nextPageToken, annotation, err := ub.GetUsers(ctx, pToken)
-
+	err := ub.connector.cacheUsers(ctx)
 	if err != nil {
 		return nil, "", nil, err
 	}
 
-	for _, user := range ub.users {
+	users := ub.connector.cachedUsers
+
+	for _, user := range users {
 		userCopy := user
 		userResource, err := parseIntoUserResource(ctx, &userCopy, nil)
 		if err != nil {
@@ -42,7 +41,7 @@ func (ub *userBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId
 		resources = append(resources, userResource)
 	}
 
-	return resources, nextPageToken, annotation, nil
+	return resources, "", nil, nil
 }
 
 func parseIntoUserResource(_ context.Context, user *client.User, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
@@ -90,43 +89,10 @@ func (ub *userBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken
 	return nil, "", nil, nil
 }
 
-func newUserBuilder(c *client.PandaDocClient) *userBuilder {
+func newUserBuilder(c *client.PandaDocClient, con *Connector) *userBuilder {
 	return &userBuilder{
 		resourceType: userResourceType,
 		client:       c,
+		connector:    con,
 	}
-}
-
-func (ub *userBuilder) GetUsers(ctx context.Context, pToken *pagination.Token) (string, annotations.Annotations, error) {
-	ub.usersMutex.RLock()
-	defer ub.usersMutex.RUnlock()
-
-	if ub.users != nil {
-		return "", nil, nil
-	}
-
-	bag, pageToken, err := getToken(pToken, userResourceType)
-	if err != nil {
-		return "", nil, err
-	}
-
-	users, nextPageToken, _, err := ub.client.ListUsers(ctx, client.PageOptions{
-		Count: pToken.Size,
-		Page:  pageToken,
-	})
-	if err != nil {
-		return "", nil, err
-	}
-	err = bag.Next(nextPageToken)
-	if err != nil {
-		return "", nil, err
-	}
-
-	ub.users = users
-	nextPageToken, err = bag.Marshal()
-	if err != nil {
-		return "", nil, err
-	}
-
-	return nextPageToken, nil, nil
 }

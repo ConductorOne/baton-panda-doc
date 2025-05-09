@@ -2,7 +2,6 @@ package connector
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"github.com/conductorone/baton-panda-doc/pkg/client"
@@ -17,9 +16,10 @@ import (
 type workspaceBuilder struct {
 	resourceType *v2.ResourceType
 	client       *client.PandaDocClient
-	users        []client.User
-	usersMutex   sync.RWMutex
+	connector    *Connector
 }
+
+const wsPageSize = 100
 
 var permissionName = "member"
 
@@ -37,13 +37,17 @@ func (wb *workspaceBuilder) List(ctx context.Context, parentResourceID *v2.Resou
 
 	workspaces, nextPage, annotation, err := wb.client.ListWorkspaces(ctx, client.PageOptions{
 		Page:  pageToken,
-		Count: pToken.Size,
+		Count: wsPageSize,
 	})
 	if err != nil {
 		return nil, "", nil, err
 	}
 
 	err = bag.Next(nextPage)
+	if err != nil {
+		return nil, "", nil, err
+	}
+	nextPage, err = bag.Marshal()
 	if err != nil {
 		return nil, "", nil, err
 	}
@@ -56,7 +60,7 @@ func (wb *workspaceBuilder) List(ctx context.Context, parentResourceID *v2.Resou
 		resources = append(resources, workspaceResource)
 	}
 
-	return resources, "", annotation, nil
+	return resources, nextPage, annotation, nil
 }
 
 // This function parses a workspace from PandaDoc into a Workspace Resource.
@@ -105,13 +109,13 @@ func (wb *workspaceBuilder) Grants(ctx context.Context, resource *v2.Resource, p
 
 	var workspaceId = resource.Id.Resource
 
-	err := wb.GetUsers(ctx)
+	err := wb.connector.cacheUsers(ctx)
 
 	if err != nil {
 		return nil, "", nil, err
 	}
 
-	users := wb.users
+	users := wb.connector.cachedUsers
 
 	for _, user := range users {
 		for _, workspace := range user.Workspaces {
@@ -125,53 +129,10 @@ func (wb *workspaceBuilder) Grants(ctx context.Context, resource *v2.Resource, p
 	return grants, "", nil, nil
 }
 
-func newWorkspaceBuilder(client *client.PandaDocClient) *workspaceBuilder {
+func newWorkspaceBuilder(client *client.PandaDocClient, con *Connector) *workspaceBuilder {
 	return &workspaceBuilder{
 		resourceType: workspaceResourceType,
 		client:       client,
+		connector:    con,
 	}
-}
-
-func (wb *workspaceBuilder) GetUsers(ctx context.Context) error {
-	wb.usersMutex.RLock()
-	defer wb.usersMutex.RUnlock()
-
-	paginationToken := pagination.Token{
-		Size:  50,
-		Token: "",
-	}
-
-	if wb.users != nil {
-		return nil
-	}
-
-	for {
-		bag, pageToken, err := getToken(&paginationToken, userResourceType)
-		if err != nil {
-			return err
-		}
-		users, nextPageToken, _, err := wb.client.ListUsers(ctx, client.PageOptions{
-			Count: paginationToken.Size,
-			Page:  pageToken,
-		})
-		if err != nil {
-			return err
-		}
-		err = bag.Next(nextPageToken)
-		if err != nil {
-			return err
-		}
-
-		wb.users = append(wb.users, users...)
-		nextPageToken, err = bag.Marshal()
-		if err != nil {
-			return err
-		}
-		if nextPageToken == "" {
-			break
-		}
-		paginationToken.Token = nextPageToken
-	}
-
-	return nil
 }

@@ -45,7 +45,7 @@ func main() {
 func getConnector(ctx context.Context, v *viper.Viper) (types.ConnectorServer, error) {
 	// Get params from Viper
 	pdApiKey := v.GetString(apiKey)
-	pdDomain := v.GetString(domain)
+	pdDomain := v.GetBool(domain)
 
 	l := ctxzap.Extract(ctx)
 	if err := ValidateConfig(v); err != nil {

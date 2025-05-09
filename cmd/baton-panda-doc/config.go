@@ -7,12 +7,12 @@ import (
 
 const (
 	apiKey = "api-key"
-	domain = "domain"
+	domain = "europe-domain"
 )
 
 var (
 	apiKeyField = field.StringField(apiKey, field.WithRequired(true), field.WithDescription("PandaDoc account API-Key"))
-	domainField = field.StringField(domain, field.WithRequired(false), field.WithDescription("PandaDoc API domain"), field.WithDefaultValue("us"))
+	domainField = field.BoolField(domain, field.WithDescription("PandaDoc API domain. Set to true for europe domain (false by default)."), field.WithDefaultValue(false))
 
 	// ConfigurationFields defines the external configuration required for the
 	// connector to run. Note: these fields can be marked as optional or
