@@ -24,7 +24,6 @@ const (
 type PandaDocClient struct {
 	httpClient  *uhttp.BaseHttpClient
 	pandaDocURL string
-	domain      string
 	token       string
 }
 
@@ -34,7 +33,6 @@ func New(ctx context.Context, opts ...Option) (*PandaDocClient, error) {
 	pandaDocClient := &PandaDocClient{
 		httpClient:  &uhttp.BaseHttpClient{},
 		pandaDocURL: baseURL,
-		domain:      "",
 		token:       "",
 	}
 
@@ -53,23 +51,12 @@ func New(ctx context.Context, opts ...Option) (*PandaDocClient, error) {
 		return nil, err
 	}
 
-	dotIndex := strings.Index(baseURL, ".")
-	if dotIndex == -1 {
-		return nil, fmt.Errorf("invalid URL: %s", baseURL)
-	}
-
-	pDocURL := baseURL
-	if pandaDocClient.domain == "eu" {
-		baseURLCopy := baseURL
-		pDocURL = strings.Replace(baseURLCopy, ".com", ".eu", 1)
-	}
-
+	pDocURL := pandaDocClient.pandaDocURL
 	if !isValidUrl(pDocURL) {
 		return nil, fmt.Errorf("invalid URL: %s", pDocURL)
 	}
 
 	pandaDocClient.httpClient = cli
-	pandaDocClient.pandaDocURL = pDocURL
 
 	return pandaDocClient, nil
 }
@@ -82,7 +69,6 @@ func NewClient(httpClient ...*uhttp.BaseHttpClient) *PandaDocClient {
 	return &PandaDocClient{
 		httpClient:  wrapper,
 		pandaDocURL: "http://test.com",
-		domain:      "",
 		token:       "",
 	}
 }
@@ -92,18 +78,23 @@ func WithBearerToken(apiToken string) Option {
 	}
 }
 
-func WithDomain(domain string) Option {
+func WithEuropeDomain(europeDomain bool) Option {
 	return func(c *PandaDocClient) {
-		c.domain = domain
+		if europeDomain {
+			c.pandaDocURL = strings.Replace(baseURL, ".com", ".eu", 1)
+		}
 	}
+}
+
+func GetNextPageToken(total int, opts PageOptions) string {
+	if total > opts.Count*opts.Page {
+		return fmt.Sprintf("%d", opts.Page+1)
+	}
+	return ""
 }
 
 func (p *PandaDocClient) getToken() string {
 	return p.token
-}
-
-func (p *PandaDocClient) GetDomain() string {
-	return p.domain
 }
 
 func isValidUrl(urlBase string) bool {
@@ -116,14 +107,14 @@ func (c *PandaDocClient) getResourcesFromAPI(
 	urlAddress string,
 	res any,
 	reqOpt ...ReqOpt,
-) (string, annotations.Annotations, error) {
+) (annotations.Annotations, error) {
 	_, annotation, err := c.doRequest(ctx, http.MethodGet, urlAddress, &res, nil, reqOpt...)
 
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
-	return "", annotation, nil
+	return annotation, nil
 }
 
 func (c *PandaDocClient) doRequest(
@@ -210,12 +201,14 @@ func (c *PandaDocClient) ListUsers(ctx context.Context, opts PageOptions) ([]Use
 		return nil, "", nil, err
 	}
 
-	pageToken, annotation, err := c.getResourcesFromAPI(ctx, queryUrl, &res, WithPage(opts.Page), WithPageLimit(opts.Count))
+	annotation, err := c.getResourcesFromAPI(ctx, queryUrl, &res, WithPage(opts.Page), WithPageLimit(opts.Count))
 
 	if err != nil {
 		l.Error(fmt.Sprintf("Error getting resources: %s", err))
 		return nil, "", nil, err
 	}
+
+	pageToken := GetNextPageToken(res.Total, opts)
 
 	return res.Users, pageToken, annotation, nil
 }
@@ -230,12 +223,14 @@ func (c *PandaDocClient) ListWorkspaces(ctx context.Context, opts PageOptions) (
 		return nil, "", nil, err
 	}
 
-	pageToken, annotation, err := c.getResourcesFromAPI(ctx, queryUrl, &res, WithPage(opts.Page), WithPageLimit(opts.Count))
+	annotation, err := c.getResourcesFromAPI(ctx, queryUrl, &res, WithPage(opts.Page), WithPageLimit(opts.Count))
 
 	if err != nil {
 		l.Error(fmt.Sprintf("Error getting resources: %s", err))
 		return nil, "", nil, err
 	}
+
+	pageToken := GetNextPageToken(res.Total, opts)
 
 	return res.Workspaces, pageToken, annotation, nil
 }

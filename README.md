@@ -70,7 +70,7 @@ Available Commands:
 
 Flags:
       --api-key string               required: The API key for your PandaDoc account ($BATON_API_KEY)
-      --domain string                Optional: Set to 'eu' for Europe API instance ($BATON_API_DOMAIN)
+      --europe-domain bool           Optional: Set to true for Europe API instance ($BATON_API_DOMAIN)
       --client-id string             The client ID used to authenticate with ConductorOne ($BATON_CLIENT_ID)
       --client-secret string         The client secret used to authenticate with ConductorOne ($BATON_CLIENT_SECRET)
   -f, --file string                  The path to the c1z file to sync with ($BATON_FILE) (default "sync.c1z")

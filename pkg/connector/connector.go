@@ -3,6 +3,9 @@ package connector
 import (
 	"context"
 	"io"
+	"strconv"
+	"sync"
+	"time"
 
 	"github.com/conductorone/baton-panda-doc/pkg/client"
 
@@ -11,16 +14,59 @@ import (
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
 )
 
+const TTL = 5 // in minutes
+const usersPageSize = 50
+
 type Connector struct {
-	client *client.PandaDocClient
+	client         *client.PandaDocClient
+	cachedUsers    []client.User
+	cacheTimestamp time.Time
+	usersMtx       sync.Mutex
+}
+
+func (c *Connector) cacheUsers(ctx context.Context) error {
+	c.usersMtx.Lock()
+	defer c.usersMtx.Unlock()
+
+	if c.cachedUsers != nil && time.Since(c.cacheTimestamp) < TTL*time.Minute {
+		return nil
+	}
+
+	var usersToCache []client.User
+	pageOptions := client.PageOptions{
+		Count: usersPageSize,
+		Page:  1,
+	}
+
+	for {
+		users, nextPageToken, _, err := c.client.ListUsers(ctx, pageOptions)
+		if err != nil {
+			return err
+		}
+		usersToCache = append(usersToCache, users...)
+
+		if nextPageToken == "" {
+			break
+		} else {
+			pageToken, err := strconv.Atoi(nextPageToken)
+			if err != nil {
+				return err
+			}
+			pageOptions.Page = pageToken
+		}
+	}
+
+	c.cachedUsers = usersToCache
+	c.cacheTimestamp = time.Now()
+	return nil
 }
 
 // ResourceSyncers returns a ResourceSyncer for each resource type that should be synced from the upstream service.
 func (d *Connector) ResourceSyncers(ctx context.Context) []connectorbuilder.ResourceSyncer {
 	return []connectorbuilder.ResourceSyncer{
-		newUserBuilder(d.client),
-		newWorkspaceBuilder(d.client),
-		newRolesBuilder(d.client),
+		newUserBuilder(d.client, d),
+		newWorkspaceBuilder(d.client, d),
+		newRolesBuilder(d.client, d),
 	}
 }
 
@@ -45,10 +91,10 @@ func (d *Connector) Validate(ctx context.Context) (annotations.Annotations, erro
 }
 
 // New returns a new instance of the connector.
-func New(ctx context.Context, domain, apiKey string) (*Connector, error) {
+func New(ctx context.Context, europeDomain bool, apiKey string) (*Connector, error) {
 	pandaDocClient, err := client.New(
 		ctx,
-		client.WithDomain(domain),
+		client.WithEuropeDomain(europeDomain),
 		client.WithBearerToken(apiKey),
 	)
 
