@@ -24,7 +24,7 @@ jobs:
         run: go build -o connector ./cmd/baton-panda-doc
 
       - name: Run and save output
-        run: ./connector capabilities > baton_capabilities.json
+        run: ./connector capabilities --api-key=${{secrets.BATON_API_KEY}} > baton_capabilities.json
 
       - name: Commit changes
         uses: EndBug/add-and-commit@v9
