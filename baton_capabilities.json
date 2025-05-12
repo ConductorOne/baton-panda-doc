@@ -3,11 +3,37 @@
   "resourceTypeCapabilities":  [
     {
       "resourceType":  {
+        "id":  "role",
+        "displayName":  "Role",
+        "traits":  [
+          "TRAIT_ROLE"
+        ],
+        "description":  "A role is a set of permissions that can be assigned to a user."
+      },
+      "capabilities":  [
+        "CAPABILITY_SYNC"
+      ]
+    },
+    {
+      "resourceType":  {
         "id":  "user",
         "displayName":  "User",
         "traits":  [
           "TRAIT_USER"
         ]
+      },
+      "capabilities":  [
+        "CAPABILITY_SYNC"
+      ]
+    },
+    {
+      "resourceType":  {
+        "id":  "workspace",
+        "displayName":  "Workspace",
+        "traits":  [
+          "TRAIT_GROUP"
+        ],
+        "description":  "A workspace is an environment with a unique Dashboard, Documents, Templates, Catalog items, and Contacts."
       },
       "capabilities":  [
         "CAPABILITY_SYNC"
