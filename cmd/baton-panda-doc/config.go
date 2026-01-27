@@ -1,29 +1,7 @@
 package main
 
 import (
-	"github.com/conductorone/baton-sdk/pkg/field"
 	"github.com/spf13/viper"
-)
-
-const (
-	apiKey = "api-key"
-	domain = "europe-domain"
-)
-
-var (
-	apiKeyField = field.StringField(apiKey, field.WithRequired(true), field.WithDescription("PandaDoc account API-Key"))
-	domainField = field.BoolField(domain, field.WithDescription("PandaDoc API domain. Set to true for europe domain (false by default)."), field.WithDefaultValue(false))
-
-	// ConfigurationFields defines the external configuration required for the
-	// connector to run. Note: these fields can be marked as optional or
-	// required.
-	ConfigurationFields = []field.SchemaField{apiKeyField, domainField}
-
-	// FieldRelationships defines relationships between the fields listed in
-	// ConfigurationFields that can be automatically validated. For example, a
-	// username and password can be required together, or an access token can be
-	// marked as mutually exclusive from the username password pair.
-	FieldRelationships = []field.SchemaFieldRelationship{}
 )
 
 // ValidateConfig is run after the configuration is loaded, and should return an

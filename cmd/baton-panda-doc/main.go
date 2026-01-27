@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"os"
 
+	cfg "github.com/conductorone/baton-panda-doc/pkg/config"
 	"github.com/conductorone/baton-panda-doc/pkg/connector"
 	"github.com/conductorone/baton-sdk/pkg/config"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
 	"github.com/conductorone/baton-sdk/pkg/connectorrunner"
-	"github.com/conductorone/baton-sdk/pkg/field"
 	"github.com/conductorone/baton-sdk/pkg/types"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"github.com/spf13/viper"
@@ -25,9 +25,7 @@ func main() {
 		ctx,
 		"baton-panda-doc",
 		getConnector,
-		field.Configuration{
-			Fields: ConfigurationFields,
-		},
+		cfg.Config,
 		connectorrunner.WithDefaultCapabilitiesConnectorBuilder(&connector.Connector{}),
 	)
 	if err != nil {
@@ -45,11 +43,11 @@ func main() {
 }
 
 func getConnector(ctx context.Context, v *viper.Viper) (types.ConnectorServer, error) {
-	// Get params from Viper
-	pdApiKey := v.GetString(apiKey)
-	pdDomain := v.GetBool(domain)
-
 	l := ctxzap.Extract(ctx)
+
+	pdApiKey := v.GetString(cfg.ApiKeyField.FieldName)
+	pdDomain := v.GetBool(cfg.DomainField.FieldName)
+
 	if err := ValidateConfig(v); err != nil {
 		return nil, err
 	}
