@@ -49,7 +49,7 @@ func NewTestClient(response *http.Response, err error) *client.PandaDocClient {
 func ReadFile(fileName string) string {
 	data, err := os.ReadFile("../../test/mock_responses/" + fileName)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(err) //nolint:gocritic // test helper function, panic is acceptable
 	}
 
 	return string(data)
