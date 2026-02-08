@@ -48,7 +48,7 @@ func getConnector(ctx context.Context, pc *cfg.PandaDoc) (types.ConnectorServer,
 		return nil, err
 	}
 
-	cb, err := connector.New(ctx, pc.EuropeDomain, pc.ApiKey)
+	cb, err := connector.New(ctx, pc.EuropeDomain, pc.ApiKey, pc.BaseUrl)
 	if err != nil {
 		l.Error("error creating connector", zap.Error(err))
 		return nil, err

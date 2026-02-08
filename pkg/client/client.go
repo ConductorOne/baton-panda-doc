@@ -86,6 +86,14 @@ func WithEuropeDomain(europeDomain bool) Option {
 	}
 }
 
+func WithBaseURL(baseURL string) Option {
+	return func(c *PandaDocClient) {
+		if baseURL != "" {
+			c.pandaDocURL = baseURL
+		}
+	}
+}
+
 func GetNextPageToken(total int, opts PageOptions) string {
 	if total > opts.Count*opts.Page {
 		return fmt.Sprintf("%d", opts.Page+1)

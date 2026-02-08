@@ -17,6 +17,10 @@ var Config = field.NewConfiguration([]field.SchemaField{
 		field.WithDescription("PandaDoc API domain. Set to true for europe domain (false by default)."),
 		field.WithDefaultValue(false),
 	),
+	field.StringField(
+		"base-url",
+		field.WithDescription("Override the PandaDoc API URL (for testing)"),
+	),
 })
 
 func ValidateConfig(c *PandaDoc) error {
