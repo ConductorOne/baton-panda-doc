@@ -1,6 +1,6 @@
 ![Baton Logo](./baton-logo.png)
 
-# `baton-panda-doc` [![Go Reference](https://pkg.go.dev/badge/github.com/conductorone/baton-panda-doc.svg)](https://pkg.go.dev/github.com/conductorone/baton-panda-doc) ![main ci](https://github.com/conductorone/baton-panda-doc/actions/workflows/main.yaml/badge.svg)
+# `baton-panda-doc` [![Go Reference](https://pkg.go.dev/badge/github.com/conductorone/baton-panda-doc.svg)](https://pkg.go.dev/github.com/conductorone/baton-panda-doc) ![ci](https://github.com/conductorone/baton-panda-doc/actions/workflows/ci.yaml/badge.svg) ![verify](https://github.com/conductorone/baton-panda-doc/actions/workflows/verify.yaml/badge.svg)
 
 `baton-panda-doc` is a connector for built using the [Baton SDK](https://github.com/conductorone/baton-sdk).
 
