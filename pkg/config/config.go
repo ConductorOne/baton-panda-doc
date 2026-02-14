@@ -20,6 +20,7 @@ var Config = field.NewConfiguration([]field.SchemaField{
 	field.StringField(
 		"base-url",
 		field.WithDescription("Override the PandaDoc API URL (for testing)"),
+		field.WithHidden(true),
 	),
 })
 
