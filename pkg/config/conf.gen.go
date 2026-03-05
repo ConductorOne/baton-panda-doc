@@ -6,6 +6,7 @@ import "reflect"
 type PandaDoc struct {
 	ApiKey string `mapstructure:"api-key"`
 	EuropeDomain bool `mapstructure:"europe-domain"`
+	BaseUrl string `mapstructure:"base-url"`
 }
 
 func (c *PandaDoc) findFieldByTag(tagValue string) (any, bool) {
