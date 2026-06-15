@@ -10,6 +10,7 @@ var Config = field.NewConfiguration([]field.SchemaField{
 	field.StringField(
 		"api-key",
 		field.WithRequired(true),
+		field.WithIsSecret(true),
 		field.WithDescription("PandaDoc account API-Key"),
 	),
 	field.BoolField(
