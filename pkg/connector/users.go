@@ -5,9 +5,7 @@ import (
 
 	"github.com/conductorone/baton-panda-doc/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
-	"github.com/conductorone/baton-sdk/pkg/annotations"
-	"github.com/conductorone/baton-sdk/pkg/pagination"
-	"github.com/conductorone/baton-sdk/pkg/types/resource"
+	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
 )
 
 type userBuilder struct {
@@ -22,12 +20,12 @@ func (ub *userBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 
 // List returns all the users from the database as resource objects.
 // Users include a UserTrait because they are the 'shape' of a standard user.
-func (ub *userBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+func (ub *userBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, opts rs.SyncOpAttrs) ([]*v2.Resource, *rs.SyncOpResults, error) {
 	var resources []*v2.Resource
 
 	err := ub.connector.cacheUsers(ctx)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, nil, err
 	}
 
 	users := ub.connector.cachedUsers
@@ -36,12 +34,12 @@ func (ub *userBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId
 		userCopy := user
 		userResource, err := parseIntoUserResource(ctx, &userCopy, nil)
 		if err != nil {
-			return nil, "", nil, err
+			return nil, nil, err
 		}
 		resources = append(resources, userResource)
 	}
 
-	return resources, "", nil, nil
+	return resources, nil, nil
 }
 
 func parseIntoUserResource(_ context.Context, user *client.User, parentResourceID *v2.ResourceId) (*v2.Resource, error) {
@@ -57,20 +55,20 @@ func parseIntoUserResource(_ context.Context, user *client.User, parentResourceI
 		"owner":      user.IsOrganizationOwner,
 	}
 
-	userTraits := []resource.UserTraitOption{
-		resource.WithUserProfile(profile),
-		resource.WithStatus(userStatus),
-		resource.WithEmail(user.Email, true),
+	userTraits := []rs.UserTraitOption{
+		rs.WithUserProfile(profile),
+		rs.WithStatus(userStatus),
+		rs.WithEmail(user.Email, true),
 	}
 
 	displayName := user.Email
 
-	ret, err := resource.NewUserResource(
+	ret, err := rs.NewUserResource(
 		displayName,
 		userResourceType,
 		user.ID,
 		userTraits,
-		resource.WithParentResourceID(parentResourceID),
+		rs.WithParentResourceID(parentResourceID),
 	)
 	if err != nil {
 		return nil, err
@@ -80,13 +78,13 @@ func parseIntoUserResource(_ context.Context, user *client.User, parentResourceI
 }
 
 // Entitlements always returns an empty slice for users.
-func (ub *userBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
-	return nil, "", nil, nil
+func (ub *userBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ rs.SyncOpAttrs) ([]*v2.Entitlement, *rs.SyncOpResults, error) {
+	return nil, nil, nil
 }
 
 // Grants always returns an empty slice for users since they don't have any entitlements.
-func (ub *userBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
-	return nil, "", nil, nil
+func (ub *userBuilder) Grants(ctx context.Context, resource *v2.Resource, opts rs.SyncOpAttrs) ([]*v2.Grant, *rs.SyncOpResults, error) {
+	return nil, nil, nil
 }
 
 func newUserBuilder(c *client.PandaDocClient, con *Connector) *userBuilder {

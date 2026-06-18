@@ -8,7 +8,6 @@ import (
 
 	"github.com/conductorone/baton-panda-doc/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
-	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
 	"github.com/conductorone/baton-sdk/pkg/types/entitlement"
 	"github.com/conductorone/baton-sdk/pkg/types/grant"
@@ -29,14 +28,14 @@ func (rb *roleBuilder) ResourceType(_ context.Context) *v2.ResourceType {
 
 // There is no endpoint for Roles.
 // There are 4 system roles and custom roles can be created. We'll retrieve custom roles names from the users list.
-func (rb *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+func (rb *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, opts rs.SyncOpAttrs) ([]*v2.Resource, *rs.SyncOpResults, error) {
 	var rolesResource []*v2.Resource
 
 	for _, role := range systemRoles {
 		roleCopy := role
 		roleResource, err := parseIntoRoleResource(ctx, &roleCopy, nil)
 		if err != nil {
-			return nil, "", nil, err
+			return nil, nil, err
 		}
 		rolesResource = append(rolesResource, roleResource)
 	}
@@ -44,7 +43,7 @@ func (rb *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId
 	err := rb.connector.cacheUsers(ctx)
 
 	if err != nil {
-		return nil, "", nil, err
+		return nil, nil, err
 	}
 
 	systemRoles := []string{"Admin", "Collaborator", "Member", "Manager"}
@@ -60,23 +59,23 @@ func (rb *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId
 				}
 				roleResource, err := parseIntoRoleResource(ctx, &newRole, nil)
 				if err != nil {
-					return nil, "", nil, err
+					return nil, nil, err
 				}
 				rolesResource = append(rolesResource, roleResource)
 			}
 		}
 	}
 
-	return rolesResource, "", nil, nil
+	return rolesResource, nil, nil
 }
 
-func (rb *roleBuilder) Entitlements(ctx context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
+func (rb *roleBuilder) Entitlements(ctx context.Context, resource *v2.Resource, _ rs.SyncOpAttrs) ([]*v2.Entitlement, *rs.SyncOpResults, error) {
 	var rv []*v2.Entitlement
 
 	err := rb.GetWorkspaces(ctx)
 
 	if err != nil {
-		return nil, "", nil, err
+		return nil, nil, err
 	}
 
 	workspaces := rb.workspaces
@@ -92,16 +91,16 @@ func (rb *roleBuilder) Entitlements(ctx context.Context, resource *v2.Resource, 
 		rv = append(rv, entitlement.NewPermissionEntitlement(resource, permissionName, assigmentOptions...))
 	}
 
-	return rv, "", nil, nil
+	return rv, nil, nil
 }
 
-func (rb *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
+func (rb *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, opts rs.SyncOpAttrs) ([]*v2.Grant, *rs.SyncOpResults, error) {
 	var grants []*v2.Grant
 
 	err := rb.connector.cacheUsers(ctx)
 
 	if err != nil {
-		return nil, "", nil, err
+		return nil, nil, err
 	}
 
 	users := rb.connector.cachedUsers
@@ -110,7 +109,7 @@ func (rb *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken
 			if workspace.Role == resource.Id.Resource {
 				workspaceName, err := rb.GetWorkspaceName(ctx, workspace.WorkspaceID)
 				if err != nil {
-					return nil, "", nil, err
+					return nil, nil, err
 				}
 				entitlementName := fmt.Sprintf("assigned in workspace %s", workspaceName)
 				userResource, _ := parseIntoUserResource(ctx, &user, resource.Id)
@@ -122,7 +121,7 @@ func (rb *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken
 		}
 	}
 
-	return grants, "", nil, nil
+	return grants, nil, nil
 }
 
 func newRolesBuilder(client *client.PandaDocClient, con *Connector) *roleBuilder {

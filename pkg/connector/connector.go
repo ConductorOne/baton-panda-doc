@@ -7,10 +7,12 @@ import (
 	"sync"
 	"time"
 
+	cfg "github.com/conductorone/baton-panda-doc/pkg/config"
 	"github.com/conductorone/baton-panda-doc/pkg/client"
 
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
+	"github.com/conductorone/baton-sdk/pkg/cli"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
 )
 
@@ -61,9 +63,9 @@ func (c *Connector) cacheUsers(ctx context.Context) error {
 	return nil
 }
 
-// ResourceSyncers returns a ResourceSyncer for each resource type that should be synced from the upstream service.
-func (d *Connector) ResourceSyncers(ctx context.Context) []connectorbuilder.ResourceSyncer {
-	return []connectorbuilder.ResourceSyncer{
+// ResourceSyncers returns a ResourceSyncerV2 for each resource type that should be synced from the upstream service.
+func (d *Connector) ResourceSyncers(ctx context.Context) []connectorbuilder.ResourceSyncerV2 {
+	return []connectorbuilder.ResourceSyncerV2{
 		newUserBuilder(d.client, d),
 		newWorkspaceBuilder(d.client, d),
 		newRolesBuilder(d.client, d),
@@ -104,4 +106,13 @@ func New(ctx context.Context, europeDomain bool, apiKey string, baseURL string) 
 	}
 
 	return &Connector{client: pandaDocClient}, nil
+}
+
+// NewLambdaConnector creates a new connector from config for use with lambda/containerized deployments.
+func NewLambdaConnector(ctx context.Context, ac *cfg.PandaDoc, _ *cli.ConnectorOpts) (connectorbuilder.ConnectorBuilderV2, []connectorbuilder.Opt, error) {
+	cb, err := New(ctx, ac.EuropeDomain, ac.ApiKey, ac.BaseUrl)
+	if err != nil {
+		return nil, nil, err
+	}
+	return cb, nil, nil
 }
