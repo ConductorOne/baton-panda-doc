@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"sync"
 
 	"github.com/conductorone/baton-panda-doc/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
@@ -15,11 +14,8 @@ import (
 )
 
 type roleBuilder struct {
-	resourceType    *v2.ResourceType
-	client          *client.PandaDocClient
-	connector       *Connector
-	workspaces      []client.Workspace
-	workspacesMutex sync.RWMutex
+	resourceType *v2.ResourceType
+	client       *client.PandaDocClient
 }
 
 func (rb *roleBuilder) ResourceType(_ context.Context) *v2.ResourceType {
@@ -40,18 +36,16 @@ func (rb *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId
 		rolesResource = append(rolesResource, roleResource)
 	}
 
-	err := rb.connector.cacheUsers(ctx)
-
+	users, err := getUsersFromSession(ctx, rb.client, opts)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	systemRoles := []string{"Admin", "Collaborator", "Member", "Manager"}
+	systemRoleNames := []string{"Admin", "Collaborator", "Member", "Manager"}
 
-	users := rb.connector.cachedUsers
 	for _, user := range users {
 		for _, workspace := range user.Workspaces {
-			if !slices.Contains(systemRoles, workspace.Role) {
+			if !slices.Contains(systemRoleNames, workspace.Role) {
 				newRole := client.Role{
 					Name:        workspace.Role,
 					IsSystem:    false,
@@ -72,13 +66,10 @@ func (rb *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId
 func (rb *roleBuilder) Entitlements(ctx context.Context, resource *v2.Resource, _ rs.SyncOpAttrs) ([]*v2.Entitlement, *rs.SyncOpResults, error) {
 	var rv []*v2.Entitlement
 
-	err := rb.GetWorkspaces(ctx)
-
+	workspaces, err := rb.GetWorkspaces(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	workspaces := rb.workspaces
 
 	for _, workspace := range workspaces {
 		permissionName := fmt.Sprintf("assigned in workspace %s", workspace.Name)
@@ -97,13 +88,11 @@ func (rb *roleBuilder) Entitlements(ctx context.Context, resource *v2.Resource, 
 func (rb *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, opts rs.SyncOpAttrs) ([]*v2.Grant, *rs.SyncOpResults, error) {
 	var grants []*v2.Grant
 
-	err := rb.connector.cacheUsers(ctx)
-
+	users, err := getUsersFromSession(ctx, rb.client, opts)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	users := rb.connector.cachedUsers
 	for _, user := range users {
 		for _, workspace := range user.Workspaces {
 			if workspace.Role == resource.Id.Resource {
@@ -124,11 +113,10 @@ func (rb *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, opts r
 	return grants, nil, nil
 }
 
-func newRolesBuilder(client *client.PandaDocClient, con *Connector) *roleBuilder {
+func newRolesBuilder(client *client.PandaDocClient) *roleBuilder {
 	return &roleBuilder{
 		resourceType: roleResourceType,
 		client:       client,
-		connector:    con,
 	}
 }
 
@@ -151,40 +139,34 @@ func parseIntoRoleResource(_ context.Context, role *client.Role, _ *v2.ResourceI
 	return ret, nil
 }
 
-func (rb *roleBuilder) GetWorkspaces(ctx context.Context) error {
-	rb.workspacesMutex.RLock()
-	defer rb.workspacesMutex.RUnlock()
-
+func (rb *roleBuilder) GetWorkspaces(ctx context.Context) ([]client.Workspace, error) {
 	paginationToken := pagination.Token{
 		Size:  wsPageSize,
 		Token: "",
 	}
 
-	if rb.workspaces != nil {
-		return nil
-	}
-
+	var workspaces []client.Workspace
 	for {
 		bag, pageToken, err := getToken(&paginationToken, workspaceResourceType)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		workspaces, nextPageToken, _, err := rb.client.ListWorkspaces(ctx, client.PageOptions{
+		page, nextPageToken, _, err := rb.client.ListWorkspaces(ctx, client.PageOptions{
 			Count: paginationToken.Size,
 			Page:  pageToken,
 		})
 		if err != nil {
-			return err
+			return nil, err
 		}
 		err = bag.Next(nextPageToken)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		rb.workspaces = append(rb.workspaces, workspaces...)
+		workspaces = append(workspaces, page...)
 		nextPageToken, err = bag.Marshal()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if nextPageToken == "" {
 			break
@@ -192,22 +174,18 @@ func (rb *roleBuilder) GetWorkspaces(ctx context.Context) error {
 		paginationToken.Token = nextPageToken
 	}
 
-	return nil
+	return workspaces, nil
 }
 
 func (rb *roleBuilder) GetWorkspaceName(ctx context.Context, workspaceID string) (string, error) {
-	err := rb.GetWorkspaces(ctx)
-
+	workspaces, err := rb.GetWorkspaces(ctx)
 	if err != nil {
 		return "", err
 	}
-	workspaceMap := make(map[string]string)
-	for _, w := range rb.workspaces {
-		workspaceMap[w.ID] = w.Name
+	for _, w := range workspaces {
+		if w.ID == workspaceID {
+			return w.Name, nil
+		}
 	}
-	if name, exists := workspaceMap[workspaceID]; exists {
-		return name, nil
-	} else {
-		return "", fmt.Errorf("provided workspace id %s does not exists", workspaceID)
-	}
+	return "", fmt.Errorf("provided workspace id %s does not exist", workspaceID)
 }

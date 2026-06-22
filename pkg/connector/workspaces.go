@@ -14,7 +14,6 @@ import (
 type workspaceBuilder struct {
 	resourceType *v2.ResourceType
 	client       *client.PandaDocClient
-	connector    *Connector
 }
 
 const wsPageSize = 100
@@ -108,13 +107,10 @@ func (wb *workspaceBuilder) Grants(ctx context.Context, resource *v2.Resource, o
 
 	var workspaceId = resource.Id.Resource
 
-	err := wb.connector.cacheUsers(ctx)
-
+	users, err := getUsersFromSession(ctx, wb.client, opts)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	users := wb.connector.cachedUsers
 
 	for _, user := range users {
 		for _, workspace := range user.Workspaces {
@@ -128,10 +124,9 @@ func (wb *workspaceBuilder) Grants(ctx context.Context, resource *v2.Resource, o
 	return grants, nil, nil
 }
 
-func newWorkspaceBuilder(client *client.PandaDocClient, con *Connector) *workspaceBuilder {
+func newWorkspaceBuilder(client *client.PandaDocClient) *workspaceBuilder {
 	return &workspaceBuilder{
 		resourceType: workspaceResourceType,
 		client:       client,
-		connector:    con,
 	}
 }

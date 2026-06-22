@@ -16,5 +16,6 @@ func main() {
 	config.RunConnector(ctx, "baton-panda-doc", version, cfg.Config,
 		connector.NewLambdaConnector,
 		connectorrunner.WithDefaultCapabilitiesConnectorBuilderV2(&connector.Connector{}),
+		connectorrunner.WithSessionStoreEnabled(),
 	)
 }
