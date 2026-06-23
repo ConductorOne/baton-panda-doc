@@ -10,6 +10,8 @@ import (
 	"github.com/conductorone/baton-sdk/pkg/types/entitlement"
 	"github.com/conductorone/baton-sdk/pkg/types/grant"
 	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
+	"go.uber.org/zap"
 )
 
 type roleBuilder struct {
@@ -101,10 +103,19 @@ func (rb *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, opts r
 		wsNames[w.ID] = w.Name
 	}
 
+	l := ctxzap.Extract(ctx)
 	for _, user := range users {
 		for _, workspace := range user.Workspaces {
 			if workspace.Role == resource.Id.Resource {
-				entitlementName := fmt.Sprintf("assigned in workspace %s", wsNames[workspace.WorkspaceID])
+				wsName, ok := wsNames[workspace.WorkspaceID]
+				if !ok {
+					l.Warn("baton-panda-doc: skipping grant for unknown workspace",
+						zap.String("workspace_id", workspace.WorkspaceID),
+						zap.String("user_id", user.ID),
+					)
+					continue
+				}
+				entitlementName := fmt.Sprintf("assigned in workspace %s", wsName)
 				userResource, _ := parseIntoUserResource(ctx, &user, resource.Id)
 				membershipGrant := grant.NewGrant(resource, entitlementName, userResource, grant.WithAnnotation(&v2.V1Identifier{
 					Id: fmt.Sprintf("workspace-grant:%s:%s:%s", resource.Id.Resource, workspace.MembershipID, workspace.Role),
