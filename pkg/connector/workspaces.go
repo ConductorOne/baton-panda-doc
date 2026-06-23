@@ -50,6 +50,10 @@ func (wb *workspaceBuilder) List(ctx context.Context, parentResourceID *v2.Resou
 		return nil, nil, err
 	}
 
+	if err := cacheWorkspacesPage(ctx, opts, workspaces); err != nil {
+		return nil, nil, err
+	}
+
 	for _, workspace := range workspaces {
 		workspaceResource, err := parseIntoWorkspaceResource(workspace)
 		if err != nil {

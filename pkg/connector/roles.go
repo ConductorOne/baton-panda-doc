@@ -7,7 +7,6 @@ import (
 
 	"github.com/conductorone/baton-panda-doc/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
-	"github.com/conductorone/baton-sdk/pkg/pagination"
 	"github.com/conductorone/baton-sdk/pkg/types/entitlement"
 	"github.com/conductorone/baton-sdk/pkg/types/grant"
 	rs "github.com/conductorone/baton-sdk/pkg/types/resource"
@@ -63,10 +62,10 @@ func (rb *roleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId
 	return rolesResource, nil, nil
 }
 
-func (rb *roleBuilder) Entitlements(ctx context.Context, resource *v2.Resource, _ rs.SyncOpAttrs) ([]*v2.Entitlement, *rs.SyncOpResults, error) {
+func (rb *roleBuilder) Entitlements(ctx context.Context, resource *v2.Resource, opts rs.SyncOpAttrs) ([]*v2.Entitlement, *rs.SyncOpResults, error) {
 	var rv []*v2.Entitlement
 
-	workspaces, err := rb.GetWorkspaces(ctx)
+	workspaces, err := getWorkspacesFromSession(ctx, rb.client, opts)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -93,14 +92,19 @@ func (rb *roleBuilder) Grants(ctx context.Context, resource *v2.Resource, opts r
 		return nil, nil, err
 	}
 
+	workspaces, err := getWorkspacesFromSession(ctx, rb.client, opts)
+	if err != nil {
+		return nil, nil, err
+	}
+	wsNames := make(map[string]string, len(workspaces))
+	for _, w := range workspaces {
+		wsNames[w.ID] = w.Name
+	}
+
 	for _, user := range users {
 		for _, workspace := range user.Workspaces {
 			if workspace.Role == resource.Id.Resource {
-				workspaceName, err := rb.GetWorkspaceName(ctx, workspace.WorkspaceID)
-				if err != nil {
-					return nil, nil, err
-				}
-				entitlementName := fmt.Sprintf("assigned in workspace %s", workspaceName)
+				entitlementName := fmt.Sprintf("assigned in workspace %s", wsNames[workspace.WorkspaceID])
 				userResource, _ := parseIntoUserResource(ctx, &user, resource.Id)
 				membershipGrant := grant.NewGrant(resource, entitlementName, userResource, grant.WithAnnotation(&v2.V1Identifier{
 					Id: fmt.Sprintf("workspace-grant:%s:%s:%s", resource.Id.Resource, workspace.MembershipID, workspace.Role),
@@ -139,53 +143,3 @@ func parseIntoRoleResource(_ context.Context, role *client.Role, _ *v2.ResourceI
 	return ret, nil
 }
 
-func (rb *roleBuilder) GetWorkspaces(ctx context.Context) ([]client.Workspace, error) {
-	paginationToken := pagination.Token{
-		Size:  wsPageSize,
-		Token: "",
-	}
-
-	var workspaces []client.Workspace
-	for {
-		bag, pageToken, err := getToken(&paginationToken, workspaceResourceType)
-		if err != nil {
-			return nil, err
-		}
-		page, nextPageToken, _, err := rb.client.ListWorkspaces(ctx, client.PageOptions{
-			Count: paginationToken.Size,
-			Page:  pageToken,
-		})
-		if err != nil {
-			return nil, err
-		}
-		err = bag.Next(nextPageToken)
-		if err != nil {
-			return nil, err
-		}
-
-		workspaces = append(workspaces, page...)
-		nextPageToken, err = bag.Marshal()
-		if err != nil {
-			return nil, err
-		}
-		if nextPageToken == "" {
-			break
-		}
-		paginationToken.Token = nextPageToken
-	}
-
-	return workspaces, nil
-}
-
-func (rb *roleBuilder) GetWorkspaceName(ctx context.Context, workspaceID string) (string, error) {
-	workspaces, err := rb.GetWorkspaces(ctx)
-	if err != nil {
-		return "", err
-	}
-	for _, w := range workspaces {
-		if w.ID == workspaceID {
-			return w.Name, nil
-		}
-	}
-	return "", fmt.Errorf("provided workspace id %s does not exist", workspaceID)
-}
