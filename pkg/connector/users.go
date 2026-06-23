@@ -12,7 +12,6 @@ import (
 type userBuilder struct {
 	resourceType *v2.ResourceType
 	client       *client.PandaDocClient
-	connector    *Connector
 }
 
 func (ub *userBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
