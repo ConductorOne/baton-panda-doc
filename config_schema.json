@@ -107,6 +107,7 @@
     },
     {
       "name": "europe-domain",
+      "displayName": "Use PandaDoc Europe domain",
       "description": "PandaDoc API domain. Set to true for europe domain (false by default).",
       "boolField": {}
     }

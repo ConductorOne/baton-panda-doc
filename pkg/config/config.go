@@ -17,6 +17,7 @@ var Config = field.NewConfiguration([]field.SchemaField{
 	),
 	field.BoolField(
 		"europe-domain",
+		field.WithDisplayName("Use PandaDoc Europe domain"),
 		field.WithDescription("PandaDoc API domain. Set to true for europe domain (false by default)."),
 		field.WithDefaultValue(false),
 	),
