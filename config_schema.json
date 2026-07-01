@@ -94,7 +94,9 @@
     },
     {
       "name": "api-key",
+      "displayName": "API Key",
       "description": "PandaDoc account API-Key",
+      "placeholder": "Enter your PandaDoc API key",
       "isRequired": true,
       "isSecret": true,
       "stringField": {
@@ -105,8 +107,12 @@
     },
     {
       "name": "europe-domain",
+      "displayName": "Use PandaDoc Europe domain",
       "description": "PandaDoc API domain. Set to true for europe domain (false by default).",
       "boolField": {}
     }
-  ]
+  ],
+  "displayName": "PandaDoc",
+  "helpUrl": "/docs/baton/panda-doc",
+  "iconUrl": "/static/app-icons/panda-doc.svg"
 }
