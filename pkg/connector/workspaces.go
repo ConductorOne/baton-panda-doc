@@ -74,15 +74,14 @@ func parseIntoWorkspaceResource(workspace client.Workspace) (*v2.Resource, error
 		"date_created": workspace.DateCreated.Format(time.RFC3339),
 	}
 
-	groupTraits := []rs.GroupTraitOption{
-		rs.WithGroupProfile(profile),
-	}
+	groupTraits := []rs.GroupTraitOption{}
 
 	ret, err := rs.NewGroupResource(
 		workspace.Name,
 		workspaceResourceType,
 		workspace.ID,
 		groupTraits,
+		rs.WithResourceProfile(profile),
 	)
 
 	if err != nil {
