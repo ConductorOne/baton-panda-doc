@@ -1,0 +1,289 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "PandaDoc Public API v1 (baton-panda-doc surface)",
+    "version": "2026-09-22",
+    "description": "The subset of the PandaDoc Public API that baton-panda-doc calls. Scope is connector scope: two operations, and only the response fields the connector's structs declare. Shapes are proven by the recorded responses in test/mock_responses/ (accessed 2026-09-22); PandaDoc's reference lives at developers.pandadoc.com.",
+    "contact": {
+      "name": "PandaDoc API reference",
+      "url": "https://developers.pandadoc.com/reference/about"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.pandadoc.com/public/v1",
+      "description": "Default (pkg/client/client.go baseURL)."
+    },
+    {
+      "url": "https://api.pandadoc.eu/public/v1",
+      "description": "EU region. Selected by swapping .com for .eu on the default base URL, not by a separate config field."
+    }
+  ],
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "paths": {
+    "/users": {
+      "get": {
+        "operationId": "listUsers",
+        "summary": "List organization members",
+        "description": "pkg/client/client.go ListUsers. Paginated by page number: the connector requests `page` and `count`, then decides whether another page exists by comparing `total` against count*page (GetNextPageToken). The API supplies no next-page cursor, so termination is computed entirely client-side from `total`.",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "1-based page number. The connector sends 1 when its page option is 0.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "count",
+            "in": "query",
+            "required": false,
+            "description": "Page size, capped at 50 (pkg/client/pagination.go ItemsPerPage). The connector clamps anything <= 0 or above 50 to 50.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of organization members.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/workspaces": {
+      "get": {
+        "operationId": "listWorkspaces",
+        "summary": "List workspaces",
+        "description": "pkg/client/client.go ListWorkspaces. Paginated identically to /users, including the same client-side termination from `total`.",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "1-based page number.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "count",
+            "in": "query",
+            "required": false,
+            "description": "Page size, capped at 50 (pkg/client/pagination.go ItemsPerPage). The connector clamps anything <= 0 or above 50 to 50.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of workspaces.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "PandaDoc API key sent as `Authorization: API-Key <token>`. Note the scheme word is `API-Key`, not `Bearer`, so this is modelled as an apiKey header rather than http/bearer."
+      }
+    },
+    "responses": {
+      "Error": {
+        "description": "Error. The connector decodes no error body; uhttp classifies by status code.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "UserResponse": {
+        "type": "object",
+        "description": "Paginated members envelope. `total` is the whole-collection count and is the only thing driving pagination.",
+        "required": [
+          "results",
+          "total"
+        ],
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/User"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "description": "Total members across all pages."
+          }
+        }
+      },
+      "WorkspaceResponse": {
+        "type": "object",
+        "description": "Paginated workspaces envelope.",
+        "required": [
+          "results",
+          "total"
+        ],
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Workspace"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "description": "Total workspaces across all pages."
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "description": "Only the fields baton-panda-doc reads. user_id is the user resource ID.",
+        "required": [
+          "user_id",
+          "email",
+          "is_organization_owner",
+          "license"
+        ],
+        "properties": {
+          "user_id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "first_name": {
+            "type": "string"
+          },
+          "last_name": {
+            "type": "string"
+          },
+          "phone_number": {
+            "type": "string",
+            "nullable": true,
+            "description": "Null in the recorded fixture. The connector decodes it into a plain string, so a null lands as \"\"."
+          },
+          "is_organization_owner": {
+            "type": "boolean"
+          },
+          "license": {
+            "type": "string",
+            "description": "License tier, e.g. \"Guest\". Left unconstrained: the connector treats it as an opaque string and the recorded fixture shows only one value."
+          },
+          "workspaces": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserWorkspaceMembership"
+            },
+            "description": "Workspace memberships. NOTE: the Go field carries no json tag, so it binds by Go's case-insensitive field-name match on \"workspaces\" rather than an explicit tag."
+          }
+        }
+      },
+      "UserWorkspaceMembership": {
+        "type": "object",
+        "description": "A member's role within one workspace. These drive the workspace grants.",
+        "required": [
+          "role",
+          "workspace_id",
+          "membership_id"
+        ],
+        "properties": {
+          "role": {
+            "type": "string",
+            "description": "Role name, e.g. \"Collaborator\" or a custom role name. Not an enum: PandaDoc allows custom roles, and the fixture shows \"Custom Role\" alongside built-ins."
+          },
+          "workspace_id": {
+            "type": "string"
+          },
+          "membership_id": {
+            "type": "string"
+          }
+        }
+      },
+      "Workspace": {
+        "type": "object",
+        "description": "Only the fields baton-panda-doc reads. id is the workspace resource ID.",
+        "required": [
+          "id",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string",
+            "description": "Owner's email address, not a user id -- confirmed by the recorded fixture."
+          },
+          "date_created": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}
